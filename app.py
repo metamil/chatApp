@@ -97,3 +97,6 @@ def send_message():
 @cross_origin()
 def get():
     return jsonify({"success" : True})
+
+if __name__ == "__main__":
+    app.run()
