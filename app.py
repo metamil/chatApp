@@ -47,7 +47,6 @@ def getUser():
 
 
 @app.route('/get_messages', methods=['GET'])
-@cross_origin()
 def get_messages():
     sender_id = request.args.get('sender')
     receiver_id = request.args.get('receiver')
