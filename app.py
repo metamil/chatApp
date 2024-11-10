@@ -2,10 +2,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 from pymongo import MongoClient
 from datetime import datetime
-
-
-
-
+import random
+import string
+from uuid import uuid4
 
 app = Flask(__name__)
 cors = CORS(app) # allow CORS for all domains on all routes.
@@ -14,6 +13,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 client = MongoClient('mongodb+srv://tamil:tamil@chatapp.kp271.mongodb.net/')  # Replace with your MongoDB connection string
 db = client['Users']
 users_collection = db['user']
+group_collection = client["Groups"]['groups']
 
 @app.route("/login", methods = ["POST"])
 @cross_origin()
@@ -21,13 +21,18 @@ def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
+    try:
+        user = users_collection.find_one({'user': username, 'password': password})
+        if user:
+            user_data = {'id': str(user['_id']), 'username': user['user']}
+            return jsonify({'success': True, 'user': user_data})
+        else:
+            return jsonify({'success': False}), 401
 
-    user = users_collection.find_one({'user': username, 'password': password})
-    if user:
-         user_data = {'id': str(user['_id']), 'username': user['user']}
-         return jsonify({'success': True, 'user': user_data})
-    else:
-        return jsonify({'success': False}), 401
+    except Exception:
+        print(Exception)
+        return jsonify({'success' : False}), 500
+    
     
 @app.route("/users", methods=["POST"])
 @cross_origin()
@@ -39,7 +44,7 @@ def getUser():
     userss = []
     print(users)
     for user in users:
-        if str(user["_id"]) != user_id:
+        if str(user["_id"]) != str(user_id):
           userss.append({"id" : str(user["_id"]),"name" : user["user"]})
     print(userss)
 
@@ -47,6 +52,7 @@ def getUser():
 
 
 @app.route('/get_messages', methods=['GET'])
+@cross_origin()
 def get_messages():
     sender_id = request.args.get('sender')
     receiver_id = request.args.get('receiver')
@@ -89,13 +95,25 @@ def send_message():
             {'$push': {'messages': {'sender_id': sender_id, 'message': message, 'timestamp': datetime.utcnow()}}}
         )
         return jsonify({'success': True})
+    
+
     else:
-        return jsonify({'success': False}), 404
+        chat_collection.insert_one(
+    {
+        'sender_id': sender_id,
+        'receiver_id': receiver_id,
+        'messages': [
+            {
+                'sender_id': sender_id,
+                'message': message,
+                'timestamp': datetime.utcnow()
+            }
+        ]
+    }
+)
+        return jsonify({'success': True})
     
 @app.route("/t", methods=["GET"])
 @cross_origin()
 def get():
     return jsonify({"success" : True})
-
-if __name__ == "__main__":
-    app.run()
